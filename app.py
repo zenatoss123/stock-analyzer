@@ -12,12 +12,23 @@ period = st.selectbox("Period", ["1mo", "3mo", "6mo", "1y"], index=2)
 
 if st.button("Analyze"):
     with st.spinner("Fetching data..."):
-        stock = yf.Ticker(ticker)
-        data = stock.history(period=period)
+        try:
+            data = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+        except Exception as e:
+            st.error(f"Data fetch error: {e}")
+            st.stop()
 
         if data.empty:
             st.error("No data found. Check the ticker symbol.")
         else:
+            # 컬럼 정리
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = data.columns.get_level_values(0)
+
+            import pandas as pd
+            data = data.copy()
+            data.columns = [c[0] if isinstance(c, tuple) else c for c in data.columns]
+
             # 지표 계산
             data["MA5"] = data["Close"].rolling(5).mean()
             data["MA20"] = data["Close"].rolling(20).mean()
